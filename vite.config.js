@@ -7,6 +7,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [vue()],
-    base: isProd ? '/Sourdough/' : '/', // ⚠️ adapte le nom ici
+    base: isProd ? '/DeskReservation/' : '/', // ⚠️ adapte le nom ici
   }
 })
