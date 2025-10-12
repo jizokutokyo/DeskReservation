@@ -1,10 +1,10 @@
-<template> 
-  <div class="day-view">
-    <h3>View day: {{ selectedDate }}</h3>
+<template>
+  <div class="week-view">
+    <h3>Weekly Desk Reservations</h3>
 
     <div class="date-picker">
-      <label>Choose a date:</label>
-      <input type="date" v-model="selectedDate" />
+      <label>Select week (start date):</label>
+      <input type="date" v-model="weekStart" />
     </div>
 
     <div class="table-wrapper">
@@ -12,7 +12,7 @@
         <thead>
           <tr>
             <th>Desk</th>
-            <th v-for="slot in timeSlots" :key="slot">{{ slot }}</th>
+            <th v-for="day in weekDays" :key="day">{{ day }}</th>
           </tr>
         </thead>
         <tbody>
@@ -23,21 +23,22 @@
           >
             <td>Desk {{ desk }}</td>
             <td
-              v-for="slot in timeSlots"
-              :key="slot"
-              :class="{ reserved: isReserved(desk, slot) }"
-              @mouseenter="handleHover(desk, slot)"
-              @mouseleave="hoveredReservation = null"
+              v-for="day in weekDays"
+              :key="day"
+              class="day-cell"
             >
-              <div class="cell-content">
-                <span class="reservation-name">{{ getReservationName(desk, slot) }}</span>
-                <button
-                  v-if="isReserved(desk, slot)"
-                  class="delete-icon"
-                  @click.stop="openConfirmPopover(desk, slot)"
-                >
-                  🗑️
-                </button>
+              <div class="slot before" 
+                   :class="{ reserved: isReserved(desk, day, 'before') }"
+                   @click="openConfirmPopover(desk, day, 'before')">
+                Before 1 PM<br />
+                <span class="reservation-name">{{ getReservationName(desk, day, 'before') }}</span>
+              </div>
+
+              <div class="slot after" 
+                   :class="{ reserved: isReserved(desk, day, 'after') }"
+                   @click="openConfirmPopover(desk, day, 'after')">
+                After 1 PM<br />
+                <span class="reservation-name">{{ getReservationName(desk, day, 'after') }}</span>
               </div>
             </td>
           </tr>
@@ -45,11 +46,11 @@
       </table>
     </div>
 
-    <!-- 💬 Mini Popover de confirmation -->
+    <!-- Confirmation pop-up -->
     <div v-if="confirmPopover" class="confirm-popover">
       <p>
-        Delete this reservation
-        <strong>{{ confirmPopover.reservation.userName }}</strong> ?
+        Delete this reservation for
+        <strong>{{ confirmPopover.reservation.userName }}</strong>?
       </p>
       <div class="buttons">
         <button @click="confirmDelete" class="delete">Yes</button>
@@ -66,21 +67,23 @@ import { db } from "../firebase";
 
 export default {
   setup() {
-    const desks = [1, 2, 3, 4, 5, 6, 7, 8];
-    const selectedDate = ref(new Date().toISOString().slice(0, 10));
+    const desks = Array.from({ length: 10 }, (_, i) => i + 1);
+    const weekStart = ref(new Date().toISOString().slice(0, 10));
     const reservations = ref([]);
-    const hoveredReservation = ref(null);
     const confirmPopover = ref(null);
 
-    // Créneaux horaires
-    const timeSlots = [];
-    for (let h = 8; h <= 17; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const hh = h.toString().padStart(2, "0");
-        const mm = m.toString().padStart(2, "0");
-        timeSlots.push(`${hh}:${mm}`);
+    const getWeekDays = (startDate) => {
+      const start = new Date(startDate);
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        days.push(d.toISOString().slice(0, 10));
       }
-    }
+      return days;
+    };
+
+    const weekDays = ref(getWeekDays(weekStart.value));
 
     let unsubscribe = null;
 
@@ -88,43 +91,34 @@ export default {
       if (unsubscribe) unsubscribe();
       const q = query(collection(db, "reservations"));
       unsubscribe = onSnapshot(q, (snapshot) => {
-        reservations.value = snapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((r) => {
-            const start = r.startTime.toDate ? r.startTime.toDate() : new Date(r.startTime);
-            return start.toISOString().slice(0, 10) === selectedDate.value;
-          });
+        reservations.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       });
     };
 
     onMounted(fetchReservationsRealtime);
-    watch(selectedDate, fetchReservationsRealtime);
+    watch(weekStart, (newDate) => {
+      weekDays.value = getWeekDays(newDate);
+      fetchReservationsRealtime();
+    });
 
-    const getReservation = (deskId, slot) => {
-      return reservations.value.find((r) => {
-        const start = r.startTime.toDate ? r.startTime.toDate() : new Date(r.startTime);
-        const end = r.endTime.toDate ? r.endTime.toDate() : new Date(r.endTime);
-        const [h, m] = slot.split(":");
-        const slotDate = new Date(`${selectedDate.value}T${h}:${m}:00`);
-        return slotDate >= start && slotDate < end && r.deskId === deskId;
-      });
+    const isReserved = (deskId, day, period) => {
+      return !!reservations.value.find(
+        (r) => r.deskId === deskId && r.date === day && r.period === period
+      );
     };
 
-    const isReserved = (deskId, slot) => !!getReservation(deskId, slot);
-
-    const getReservationName = (deskId, slot) => {
-      const res = getReservation(deskId, slot);
+    const getReservationName = (deskId, day, period) => {
+      const res = reservations.value.find(
+        (r) => r.deskId === deskId && r.date === day && r.period === period
+      );
       return res ? res.userName : "";
     };
 
-    const handleHover = (deskId, slot) => {
-      const res = getReservation(deskId, slot);
-      if (res) hoveredReservation.value = { deskId, slot };
-    };
-
-    const openConfirmPopover = (deskId, slot) => {
-      const res = getReservation(deskId, slot);
-      if (res) confirmPopover.value = { deskId, slot, reservation: res };
+    const openConfirmPopover = (deskId, day, period) => {
+      const res = reservations.value.find(
+        (r) => r.deskId === deskId && r.date === day && r.period === period
+      );
+      if (res) confirmPopover.value = { deskId, day, period, reservation: res };
     };
 
     const confirmDelete = async () => {
@@ -135,15 +129,13 @@ export default {
 
     return {
       desks,
-      selectedDate,
-      timeSlots,
+      weekStart,
+      weekDays,
       reservations,
       isReserved,
       getReservationName,
-      hoveredReservation,
-      handleHover,
-      confirmPopover,
       openConfirmPopover,
+      confirmPopover,
       confirmDelete,
     };
   },
@@ -151,138 +143,81 @@ export default {
 </script>
 
 <style scoped>
-.day-view {
+.week-view {
   background-color: #fafafa;
   padding: 28px;
   border-radius: 18px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
-  width: 1200px;
+  width: 100%;
+  max-width: 1300px;
   margin: 40px auto;
 }
 
-.day-view h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 20px;
+h3 {
   text-align: center;
-  color: #222;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
 }
 
 .date-picker {
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 12px;
-  justify-content: center;
   margin-bottom: 24px;
-}
-
-.date-picker label {
-  font-weight: 500;
-}
-
-.date-picker input {
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 15px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.date-picker input:focus {
-  outline: none;
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }
 
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 12px;
   background-color: white;
+  border-radius: 12px;
 }
 
 table {
-  border-collapse: collapse;
   width: 100%;
-  min-width: 1100px;
-  border-radius: 12px;
-  overflow: hidden;
-  font-size: 14px;
+  border-collapse: collapse;
+  min-width: 1000px;
+  text-align: center;
 }
 
-thead th {
-  background-color: #f2f2f7;
-  color: #333;
-  font-weight: 600;
-  padding: 10px;
-  text-align: center;
-  border-bottom: 2px solid #ddd;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-td {
-  padding: 8px;
-  text-align: center;
+th, td {
   border: 1px solid #e5e5ea;
-  transition: background-color 0.2s;
-  position: relative;
+  padding: 8px;
+  vertical-align: middle;
 }
 
-tr:hover td {
-  background-color: #f9f9fb;
-}
-
-.desk-row td:first-child {
+th {
+  background-color: #f2f2f7;
   font-weight: 600;
-  background-color: #f9fafc;
-  border-right: 2px solid #ddd;
+}
+
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.slot {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  padding: 8px 0;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.slot:hover {
+  background-color: #f0f8ff;
 }
 
 .reserved {
   background-color: #007aff;
   color: white;
   font-weight: 600;
-  border-radius: 6px;
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
 }
 
-/* ✅ Cellule avec icône poubelle */
-.cell-content {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.reservation-name {
-  display: inline-block;
-}
-
-.delete-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.8); /* centré + échelle initiale */
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 18px; /* plus lisible */
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  pointer-events: auto;
-}
-
-.reserved:hover .delete-icon {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1); /* centré + agrandi au hover */
-}
-
-/* Mini popover */
 .confirm-popover {
   position: fixed;
   top: 50%;
@@ -291,17 +226,16 @@ tr:hover td {
   background: white;
   padding: 18px 24px;
   border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   text-align: center;
-  animation: fadeIn 0.2s ease;
-  z-index: 200;
+  z-index: 1000;
 }
 
 .confirm-popover .buttons {
-  margin-top: 12px;
   display: flex;
-  gap: 12px;
   justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .confirm-popover .delete {
@@ -315,41 +249,9 @@ tr:hover td {
 
 .confirm-popover .cancel {
   background: #ccc;
-  color: #333;
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -45%); }
-  to { opacity: 1; transform: translate(-50%, -50%); }
-}
-
-/* Couleurs par desk */
-.desk-color-0 td:first-child { background-color: #e6f7ff; }
-.desk-color-1 td:first-child { background-color: #fff1e6; }
-.desk-color-2 td:first-child { background-color: #f3e6ff; }
-.desk-color-3 td:first-child { background-color: #e9fbe6; }
-.desk-color-4 td:first-child { background-color: #fffbe6; }
-.desk-color-5 td:first-child { background-color: #ffe9e6; }
-.desk-color-6 td:first-child { background-color: #f1f1f1; }
-.desk-color-7 td:first-child { background-color: #e6f3ff; }
-
-@media (max-width: 900px) {
-  .day-view {
-    padding: 20px;
-  }
-
-  table {
-    font-size: 12px;
-    min-width: 900px;
-  }
-
-  .date-picker {
-    flex-direction: column;
-    gap: 8px;
-  }
 }
 </style>
