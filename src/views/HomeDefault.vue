@@ -26,30 +26,31 @@ export default {
 
 <style>
 .home {
-  max-width: 1500px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 20px 24px; /* reduced top/bottom spacing */
   background-color: #f5f5f7;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
   display: flex;
   flex-direction: column;
-  gap: 10px; /* espace entre formulaire et dayview */
+  align-items: center;
+  gap: 8px; /* reduced spacing between form and table */
   min-height: 100vh;
 }
 
 h1 {
   text-align: center;
-  font-size: 2rem;
+  font-size: 1.9rem;
   font-weight: 700;
   color: #1c1c1e;
-  margin-bottom: 0;
+  margin: 0 0 10px 0; /* reduced bottom margin */
 }
 
 @media (max-width: 900px) {
   .home {
-    padding: 24px 12px;
-    gap: 12px;
+    padding: 16px 12px;
+    gap: 6px;
   }
 
   h1 {
