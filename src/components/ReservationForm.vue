@@ -4,7 +4,7 @@
       <div class="form-row">
         <div class="form-field">
           <label>Name:</label>
-          <input v-model="userName" required />
+          <input v-model="userName" placeholder="Enter your name" required />
         </div>
 
         <div class="form-field">
@@ -28,7 +28,7 @@
           </select>
         </div>
 
-        <button type="submit">Reserve</button>
+        <button type="submit" class="submit-btn">Reserve</button>
       </div>
     </form>
   </div>
@@ -64,7 +64,7 @@ export default {
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
-        alert("This slot is already reserved. Please choose another time period.");
+        alert("This slot is already reserved. Please choose another period.");
         return;
       }
 
@@ -81,38 +81,30 @@ export default {
       this.date = "";
       this.period = "";
 
-      // Notify parent to refresh
+      // Notify parent
       this.$emit("reservation-added");
     },
   },
 };
 </script>
 
-<style>
+<style scoped>
 .reservation-form {
-  width: 1200px;
-  margin: 40px auto;
-  padding: 24px 32px;
-  border-radius: 18px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 10px auto 0;
+  padding: 16px 24px;
+  border-radius: 12px;
   background-color: #fafafa;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
-  margin-bottom: 10px;
-}
-
-.reservation-form h3 {
-  margin-bottom: 10px;
-  font-size: 1.6rem;
-  font-weight: 600;
-  text-align: center;
-  color: #222;
 }
 
 .form-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 16px;
   align-items: flex-end;
   justify-content: center;
 }
@@ -120,7 +112,7 @@ export default {
 .form-field {
   display: flex;
   flex-direction: column;
-  min-width: 140px;
+  min-width: 150px;
   flex: 1;
 }
 
@@ -128,38 +120,39 @@ export default {
   font-weight: 500;
   font-size: 0.9rem;
   margin-bottom: 4px;
+  color: #222;
 }
 
 .form-field input,
 .form-field select {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  font-size: 15px;
+  font-size: 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fff;
 }
 
 .form-field input:focus,
 .form-field select:focus {
   outline: none;
   border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
 }
 
-button {
-  padding: 12px 24px;
+.submit-btn {
+  padding: 10px 20px;
   background-color: #007aff;
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  align-self: flex-end;
   transition: background-color 0.2s, transform 0.1s;
 }
 
-button:hover {
+.submit-btn:hover {
   background-color: #0062d6;
   transform: translateY(-1px);
 }
@@ -170,7 +163,7 @@ button:hover {
     align-items: stretch;
   }
 
-  button {
+  .submit-btn {
     width: 100%;
     margin-top: 10px;
   }
