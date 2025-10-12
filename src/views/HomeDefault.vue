@@ -34,7 +34,7 @@ export default {
   color: #333;
   display: flex;
   flex-direction: column;
-  gap: 30px; /* espace entre formulaire et dayview */
+  gap: 15px; /* espace entre formulaire et dayview */
   min-height: 100vh;
 }
 
