@@ -15,6 +15,8 @@
             <th v-for="day in weekDays" :key="day">{{ day }}</th>
           </tr>
         </thead>
+
+        <!-- ✅ NOUVEAU TBODY -->
         <tbody>
           <tr
             v-for="(desk, index) in desks"
@@ -22,23 +24,25 @@
             :class="`desk-row desk-color-${index}`"
           >
             <td>Desk {{ desk }}</td>
-            <td
-              v-for="day in weekDays"
-              :key="day"
-              class="day-cell"
-            >
-              <div class="slot before" 
-                   :class="{ reserved: isReserved(desk, day, 'before') }"
-                   @click="openConfirmPopover(desk, day, 'before')">
-                Before 1 PM<br />
-                <span class="reservation-name">{{ getReservationName(desk, day, 'before') }}</span>
-              </div>
+            <td v-for="day in weekDays" :key="day" class="day-cell">
+              <div class="period-container">
+                <div
+                  class="slot"
+                  :class="{ reserved: isReserved(desk, day, 'before') }"
+                  @click="openConfirmPopover(desk, day, 'before')"
+                >
+                  Before 1 PM
+                  <span class="reservation-name">{{ getReservationName(desk, day, 'before') }}</span>
+                </div>
 
-              <div class="slot after" 
-                   :class="{ reserved: isReserved(desk, day, 'after') }"
-                   @click="openConfirmPopover(desk, day, 'after')">
-                After 1 PM<br />
-                <span class="reservation-name">{{ getReservationName(desk, day, 'after') }}</span>
+                <div
+                  class="slot"
+                  :class="{ reserved: isReserved(desk, day, 'after') }"
+                  @click="openConfirmPopover(desk, day, 'after')"
+                >
+                  After 1 PM
+                  <span class="reservation-name">{{ getReservationName(desk, day, 'after') }}</span>
+                </div>
               </div>
             </td>
           </tr>
@@ -182,7 +186,8 @@ table {
   text-align: center;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #e5e5ea;
   padding: 8px;
   vertical-align: middle;
@@ -194,18 +199,25 @@ th {
 }
 
 .day-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   padding: 6px;
 }
 
+.period-container {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 6px;
+}
+
 .slot {
-  border-radius: 8px;
+  flex: 1;
+  text-align: center;
   border: 1px solid #ccc;
-  padding: 8px 0;
-  transition: background-color 0.2s;
+  border-radius: 6px;
+  padding: 6px 0;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .slot:hover {
