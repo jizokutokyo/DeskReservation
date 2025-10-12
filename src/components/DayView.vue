@@ -69,7 +69,7 @@
 
 <script>
 import { ref, onMounted, watch } from "vue";
-import { collection, query, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
 export default {
@@ -79,6 +79,7 @@ export default {
     const reservations = ref([]);
     const confirmPopover = ref(null);
 
+    // Get all days in the selected week
     const getWeekDays = (startDate) => {
       const start = new Date(startDate);
       const days = [];
@@ -94,6 +95,7 @@ export default {
 
     let unsubscribe = null;
 
+    // Real-time Firestore subscription
     const fetchReservationsRealtime = () => {
       if (unsubscribe) unsubscribe();
       const q = query(collection(db, "reservations"));
@@ -120,16 +122,40 @@ export default {
       return res ? res.userName : "";
     };
 
+    // Open confirmation popup
     const openConfirmPopover = (deskId, day, period) => {
       const res = reservations.value.find(
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
-      if (res) confirmPopover.value = { deskId, day, period, reservation: res };
+
+      if (!res) return;
+
+      const currentUser = localStorage.getItem("userName");
+      if (res.userName !== currentUser) {
+        alert("You can only delete your own reservation.");
+        return;
+      }
+
+      confirmPopover.value = { deskId, day, period, reservation: res };
     };
 
+    // Delete + log
     const confirmDelete = async () => {
       if (!confirmPopover.value) return;
-      await deleteDoc(doc(db, "reservations", confirmPopover.value.reservation.id));
+      const res = confirmPopover.value.reservation;
+
+      await deleteDoc(doc(db, "reservations", res.id));
+
+      // ✅ Add log entry
+      await addDoc(collection(db, "logs"), {
+        action: "deleted",
+        userName: res.userName,
+        deskId: res.deskId,
+        date: res.date,
+        period: res.period,
+        timestamp: serverTimestamp(),
+      });
+
       confirmPopover.value = null;
     };
 
