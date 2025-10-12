@@ -16,7 +16,6 @@
           </tr>
         </thead>
 
-        <!-- ✅ NOUVEAU TBODY -->
         <tbody>
           <tr
             v-for="(desk, index) in desks"
@@ -32,7 +31,9 @@
                   @click="openConfirmPopover(desk, day, 'before')"
                 >
                   Before 1 PM
-                  <span class="reservation-name">{{ getReservationName(desk, day, 'before') }}</span>
+                  <span class="reservation-name">
+                    {{ getReservationName(desk, day, 'before') }}
+                  </span>
                 </div>
 
                 <div
@@ -41,7 +42,9 @@
                   @click="openConfirmPopover(desk, day, 'after')"
                 >
                   After 1 PM
-                  <span class="reservation-name">{{ getReservationName(desk, day, 'after') }}</span>
+                  <span class="reservation-name">
+                    {{ getReservationName(desk, day, 'after') }}
+                  </span>
                 </div>
               </div>
             </td>
@@ -50,7 +53,7 @@
       </table>
     </div>
 
-    <!-- Confirmation pop-up -->
+    <!-- confirmation pop-up -->
     <div v-if="confirmPopover" class="confirm-popover">
       <p>
         Delete this reservation for
@@ -105,11 +108,10 @@ export default {
       fetchReservationsRealtime();
     });
 
-    const isReserved = (deskId, day, period) => {
-      return !!reservations.value.find(
+    const isReserved = (deskId, day, period) =>
+      !!reservations.value.find(
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
-    };
 
     const getReservationName = (deskId, day, period) => {
       const res = reservations.value.find(
@@ -149,28 +151,28 @@ export default {
 <style scoped>
 .week-view {
   background-color: #fafafa;
-  padding: 28px;
-  border-radius: 18px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
   width: 100%;
-  max-width: 1300px;
-  margin: 40px auto;
+  max-width: 1200px;
+  margin: 0 auto 30px;
 }
 
 h3 {
   text-align: center;
-  font-size: 1.8rem;
-  margin-bottom: 20px;
+  font-size: 1.6rem;
+  margin-bottom: 14px;
 }
 
 .date-picker {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .table-wrapper {
@@ -182,7 +184,7 @@ h3 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px;
+  min-width: 900px;
   text-align: center;
 }
 
@@ -199,12 +201,12 @@ th {
 }
 
 .day-cell {
-  padding: 6px;
+  padding: 4px;
 }
 
 .period-container {
   display: flex;
-  justify-content: space-evenly;
+  justify-content: center;
   align-items: center;
   gap: 6px;
 }
@@ -214,14 +216,15 @@ th {
   text-align: center;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 6px 0;
-  font-size: 0.85rem;
+  padding: 5px 0;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
 .slot:hover {
   background-color: #f0f8ff;
+  transform: scale(1.02);
 }
 
 .reserved {
@@ -236,9 +239,9 @@ th {
   left: 50%;
   transform: translate(-50%, -50%);
   background: white;
-  padding: 18px 24px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  padding: 16px 22px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   text-align: center;
   z-index: 1000;
 }
