@@ -10,7 +10,7 @@
         <div class="form-field">
           <label>Desk:</label>
           <select v-model="deskId" required>
-            <option v-for="n in 8" :key="n" :value="n">Desk {{ n }}</option>
+            <option v-for="n in 10" :key="n" :value="n">Desk {{ n }}</option>
           </select>
         </div>
 
@@ -20,16 +20,11 @@
         </div>
 
         <div class="form-field">
-          <label>Begin:</label>
-          <select v-model="startTime" required @change="updateEndTimeSlots">
-            <option v-for="slot in timeSlots" :key="slot" :value="slot">{{ slot }}</option>
-          </select>
-        </div>
-
-        <div class="form-field">
-          <label>End:</label>
-          <select v-model="endTime" required>
-            <option v-for="slot in endTimeSlots" :key="slot" :value="slot">{{ slot }}</option>
+          <label>Period:</label>
+          <select v-model="period" required>
+            <option disabled value="">Select period</option>
+            <option value="before">Before 1 PM</option>
+            <option value="after">After 1 PM</option>
           </select>
         </div>
 
@@ -49,77 +44,47 @@ export default {
       userName: "",
       deskId: 1,
       date: "",
-      startTime: "",
-      endTime: "",
-      timeSlots: [],
-      endTimeSlots: []
+      period: "",
     };
   },
-  created() {
-    const slots = [];
-    for (let h = 8; h <= 17; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const hh = h.toString().padStart(2, "0");
-        const mm = m.toString().padStart(2, "0");
-        slots.push(`${hh}:${mm}`);
-      }
-    }
-    this.timeSlots = slots;
-    this.endTimeSlots = slots;
-  },
   methods: {
-    updateEndTimeSlots() {
-      this.endTimeSlots = this.timeSlots.filter(slot => slot > this.startTime);
-      if (!this.endTimeSlots.includes(this.endTime)) {
-        this.endTime = "";
-      }
-    },
     async submitReservation() {
-      if (!this.startTime || !this.endTime || this.startTime >= this.endTime) {
-        alert("Please choose a valid time slot.");
+      if (!this.userName || !this.date || !this.period) {
+        alert("Please fill in all fields.");
         return;
       }
 
-      const startDateTime = `${this.date}T${this.startTime}:00`;
-      const endDateTime = `${this.date}T${this.endTime}:00`;
-
-      const q = query(collection(db, "reservations"), where("deskId", "==", this.deskId));
+      // Check for conflicts
+      const q = query(
+        collection(db, "reservations"),
+        where("deskId", "==", this.deskId),
+        where("date", "==", this.date),
+        where("period", "==", this.period)
+      );
       const snapshot = await getDocs(q);
-      const existing = snapshot.docs
-        .map(doc => doc.data())
-        .filter(r => r.startTime.startsWith(this.date));
 
-      const conflict = existing.some(r => {
-        const rStart = new Date(r.startTime);
-        const rEnd = new Date(r.endTime);
-        const newStart = new Date(startDateTime);
-        const newEnd = new Date(endDateTime);
-        return newStart < rEnd && newEnd > rStart;
-      });
-
-      if (conflict) {
-        alert("This slot is already reserved. Please choose another time slot.");
+      if (!snapshot.empty) {
+        alert("This slot is already reserved. Please choose another time period.");
         return;
       }
 
       await addDoc(collection(db, "reservations"), {
         deskId: this.deskId,
         userName: this.userName,
-        startTime: startDateTime,
-        endTime: endDateTime
+        date: this.date,
+        period: this.period,
       });
 
-      //alert("Reservation added!");
+      // Reset form
       this.userName = "";
       this.deskId = 1;
       this.date = "";
-      this.startTime = "";
-      this.endTime = "";
-      this.endTimeSlots = this.timeSlots;
+      this.period = "";
 
+      // Notify parent to refresh
       this.$emit("reservation-added");
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -133,7 +98,7 @@ export default {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
-  margin-bottom: 10px; /* espace personnalisé avec DayView */
+  margin-bottom: 10px;
 }
 
 .reservation-form h3 {
