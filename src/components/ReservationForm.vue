@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
 export default {
@@ -54,6 +54,9 @@ export default {
         return;
       }
 
+      // 🔐 Save username locally (to prevent deleting others' reservations)
+      localStorage.setItem("userName", this.userName);
+
       // Check for conflicts
       const q = query(
         collection(db, "reservations"),
@@ -68,11 +71,22 @@ export default {
         return;
       }
 
+      // ✅ Add reservation to Firestore
       await addDoc(collection(db, "reservations"), {
         deskId: this.deskId,
         userName: this.userName,
         date: this.date,
         period: this.period,
+      });
+
+      // ✅ Add log entry
+      await addDoc(collection(db, "logs"), {
+        action: "created",
+        userName: this.userName,
+        deskId: this.deskId,
+        date: this.date,
+        period: this.period,
+        timestamp: serverTimestamp(),
       });
 
       // Reset form
@@ -81,7 +95,7 @@ export default {
       this.date = "";
       this.period = "";
 
-      // Notify parent
+      // Notify parent component
       this.$emit("reservation-added");
     },
   },
@@ -169,3 +183,4 @@ export default {
   }
 }
 </style>
+
