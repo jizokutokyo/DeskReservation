@@ -10,7 +10,7 @@
     <div class="table-wrapper">
       <table>
         <thead>
-          <!-- Header 1: Days (each spans 2 columns) -->
+          <!-- Row 1: Days (each spans 2 columns) -->
           <tr>
             <th rowspan="2" class="desk-header">Desk</th>
             <th v-for="day in weekDays" :key="day" colspan="2" class="day-header">
@@ -18,7 +18,7 @@
             </th>
           </tr>
 
-          <!-- Header 2: AM / PM sub-columns -->
+          <!-- Row 2: AM / PM sub-columns -->
           <tr>
             <template v-for="day in weekDays" :key="day + '-sub'">
               <th class="am-header">AM</th>
@@ -28,7 +28,11 @@
         </thead>
 
         <tbody>
-          <tr v-for="desk in desks" :key="desk">
+          <tr
+            v-for="(desk, index) in desks"
+            :key="desk"
+            :class="`desk-row desk-${index + 1}`"
+          >
             <td class="desk-name">Desk {{ desk }}</td>
 
             <!-- AM / PM cells under each day -->
@@ -241,25 +245,33 @@ th, td {
   font-weight: 600;
 }
 
-.am-header {
-  background-color: #fff9e6;
-}
+.am-header { background-color: #fff9e6; }
+.pm-header { background-color: #e6f2ff; }
 
-.pm-header {
-  background-color: #e6f2ff;
-}
-
-.desk-header, .desk-name {
-  background-color: #f9fafc;
+.desk-header,
+.desk-name {
   font-weight: 600;
+  text-align: center;
 }
+
+/* 🎨 Distinct colors for each desk row */
+.desk-1 .desk-name { color: #007aff; }
+.desk-2 .desk-name { color: #ff9500; }
+.desk-3 .desk-name { color: #34c759; }
+.desk-4 .desk-name { color: #ff2d55; }
+.desk-5 .desk-name { color: #5856d6; }
+.desk-6 .desk-name { color: #ffcc00; }
+.desk-7 .desk-name { color: #5ac8fa; }
+.desk-8 .desk-name { color: #ff9f0a; }
+.desk-9 .desk-name { color: #30b0c7; }
+.desk-10 .desk-name { color: #af52de; }
 
 .slot {
   border-radius: 6px;
   padding: 6px;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .slot:hover {
