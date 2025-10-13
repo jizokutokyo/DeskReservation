@@ -10,17 +10,19 @@
     <div class="table-wrapper">
       <table>
         <thead>
-          <!-- First row: day names -->
+          <!-- Row 1: Day names, each spans 2 columns -->
           <tr>
-            <th rowspan="2">Desk</th>
-            <th v-for="day in weekDays" :key="day" colspan="2">
+            <th rowspan="2" class="desk-col">Desk</th>
+            <th v-for="day in weekDays" :key="day" colspan="2" class="day-group">
               {{ formatDay(day) }}
             </th>
           </tr>
-          <!-- Second row: AM / PM -->
+          <!-- Row 2: For each day, render AM then PM (alternating) -->
           <tr>
-            <th v-for="day in weekDays" :key="day + '-am'">AM</th>
-            <th v-for="day in weekDays" :key="day + '-pm'">PM</th>
+            <template v-for="day in weekDays" :key="day + '-sub'">
+              <th :key="day + '-am'" class="sub-col am">AM</th>
+              <th :key="day + '-pm'" class="sub-col pm">PM</th>
+            </template>
           </tr>
         </thead>
 
@@ -28,32 +30,31 @@
           <tr v-for="desk in desks" :key="desk">
             <td class="desk-name">Desk {{ desk }}</td>
 
-            <!-- AM cells -->
-            <td
-              v-for="day in weekDays"
-              :key="`${desk}-${day}-am`"
-              class="slot"
-              :class="{ reserved: isReserved(desk, day, 'am') }"
-              @click="handleSlotClick(desk, day, 'am')"
-            >
-              {{ getReservationName(desk, day, 'am') || 'Free' }}
-            </td>
-
-            <!-- PM cells -->
-            <td
-              v-for="day in weekDays"
-              :key="`${desk}-${day}-pm`"
-              class="slot"
-              :class="{ reserved: isReserved(desk, day, 'pm') }"
-              @click="handleSlotClick(desk, day, 'pm')"
-            >
-              {{ getReservationName(desk, day, 'pm') || 'Free' }}
-            </td>
+            <!-- For each day, render AM cell then PM cell (alternating) -->
+            <template v-for="day in weekDays" :key="`${desk}-${day}-cells`">
+              <td
+                :key="`${desk}-${day}-am`"
+                class="slot"
+                :class="{ reserved: isReserved(desk, day, 'am') }"
+                @click="handleSlotClick(desk, day, 'am')"
+              >
+                {{ getReservationName(desk, day, 'am') || 'Free' }}
+              </td>
+              <td
+                :key="`${desk}-${day}-pm`"
+                class="slot"
+                :class="{ reserved: isReserved(desk, day, 'pm') }"
+                @click="handleSlotClick(desk, day, 'pm')"
+              >
+                {{ getReservationName(desk, day, 'pm') || 'Free' }}
+              </td>
+            </template>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <!-- Delete confirmation -->
     <div v-if="confirmPopover" class="confirm-popover">
       <p>
         Delete this reservation for
@@ -68,7 +69,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import {
   collection,
   query,
@@ -87,6 +88,7 @@ export default {
     const reservations = ref([]);
     const confirmPopover = ref(null);
 
+    // Monday of the selected week
     const getMonday = (dateStr) => {
       const date = new Date(dateStr);
       const day = date.getDay();
@@ -94,6 +96,7 @@ export default {
       return new Date(date.setDate(diff));
     };
 
+    // Mon–Fri list
     const getWeekDays = (dateStr) => {
       const monday = getMonday(dateStr);
       const days = [];
@@ -107,15 +110,13 @@ export default {
 
     const weekDays = ref(getWeekDays(selectedDate.value));
 
+    // Realtime reservations
     let unsubscribe = null;
     const fetchReservationsRealtime = () => {
       if (unsubscribe) unsubscribe();
       const q = query(collection(db, "reservations"));
       unsubscribe = onSnapshot(q, (snapshot) => {
-        reservations.value = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        reservations.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       });
     };
 
@@ -140,12 +141,15 @@ export default {
       const res = reservations.value.find(
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
-      if (!res) return;
+
+      if (!res) return; // nothing to delete
+
       const currentUser = localStorage.getItem("userName");
       if (res.userName !== currentUser) {
         alert("You can only delete your own reservation.");
         return;
       }
+
       confirmPopover.value = { deskId, day, period, reservation: res };
     };
 
@@ -228,20 +232,24 @@ table {
   text-align: center;
 }
 
-th,
-td {
+th, td {
   border: 1px solid #e5e5ea;
   padding: 8px;
   vertical-align: middle;
 }
 
-th {
-  background-color: #f2f2f7;
-  font-weight: 600;
+th.day-group {
+  background-color: #ededed;
 }
 
-th[colspan="2"] {
-  background-color: #eaeaea;
+th.sub-col.am { background-color: #fff8e1; } /* light warm for AM */
+th.sub-col.pm { background-color: #e7f2ff; } /* light cool for PM */
+
+.desk-col { min-width: 100px; }
+
+.desk-name {
+  font-weight: 600;
+  background-color: #f9fafc;
 }
 
 .slot {
@@ -252,9 +260,7 @@ th[colspan="2"] {
   transition: background-color 0.2s;
 }
 
-.slot:hover {
-  background-color: #f0f8ff;
-}
+.slot:hover { background-color: #f0f8ff; }
 
 .reserved {
   background-color: #007aff;
