@@ -20,11 +20,11 @@
         </div>
 
         <div class="form-field">
-          <label>Period:</label>
+          <label>Time:</label>
           <select v-model="period" required>
             <option disabled value="">Select period</option>
-            <option value="before">Before 1 PM</option>
-            <option value="after">After 1 PM</option>
+            <option value="am">AM</option>
+            <option value="pm">PM</option>
           </select>
         </div>
 
@@ -54,7 +54,6 @@ export default {
         return;
       }
 
-      // 🔐 Save username locally (to prevent deleting others' reservations)
       localStorage.setItem("userName", this.userName);
 
       // Check for conflicts
@@ -71,7 +70,7 @@ export default {
         return;
       }
 
-      // ✅ Add reservation to Firestore
+      // Add reservation
       await addDoc(collection(db, "reservations"), {
         deskId: this.deskId,
         userName: this.userName,
@@ -79,7 +78,7 @@ export default {
         period: this.period,
       });
 
-      // ✅ Add log entry
+      // Add log
       await addDoc(collection(db, "logs"), {
         action: "created",
         userName: this.userName,
@@ -89,13 +88,10 @@ export default {
         timestamp: serverTimestamp(),
       });
 
-      // Reset form
       this.userName = "";
       this.deskId = 1;
       this.date = "";
       this.period = "";
-
-      // Notify parent component
       this.$emit("reservation-added");
     },
   },
@@ -112,14 +108,12 @@ export default {
   background-color: #fafafa;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #333;
 }
 
 .form-row {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  align-items: flex-end;
   justify-content: center;
 }
 
@@ -130,25 +124,23 @@ export default {
   flex: 1;
 }
 
-.form-field label {
+label {
   font-weight: 500;
   font-size: 0.9rem;
   margin-bottom: 4px;
-  color: #222;
 }
 
-.form-field input,
-.form-field select {
+input,
+select {
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
   background-color: #fff;
 }
 
-.form-field input:focus,
-.form-field select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #007aff;
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
@@ -163,24 +155,16 @@ export default {
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: background-color 0.2s;
 }
 
 .submit-btn:hover {
   background-color: #0062d6;
-  transform: translateY(-1px);
 }
 
 @media (max-width: 900px) {
   .form-row {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .submit-btn {
-    width: 100%;
-    margin-top: 10px;
   }
 }
 </style>
-
