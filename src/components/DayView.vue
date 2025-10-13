@@ -28,14 +28,12 @@
         </thead>
 
         <tbody>
-          <tr
-            v-for="(desk, index) in desks"
-            :key="desk"
-            :class="index % 2 === 0 ? 'desk-row am-bg' : 'desk-row pm-bg'"
-          >
-            <td class="desk-name">Desk {{ desk }}</td>
+          <tr v-for="(desk, index) in desks" :key="desk">
+            <td :class="index % 2 === 0 ? 'desk-name am-bg' : 'desk-name pm-bg'">
+              Desk {{ desk }}
+            </td>
 
-            <!-- AM / PM cells under each day -->
+            <!-- AM / PM cells -->
             <template v-for="day in weekDays" :key="`${desk}-${day}`">
               <td
                 class="slot am"
@@ -234,7 +232,8 @@ table {
   text-align: center;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #e5e5ea;
   padding: 8px;
   vertical-align: middle;
@@ -245,24 +244,31 @@ th, td {
   font-weight: 600;
 }
 
-.am-header { background-color: #fff9e6; }
-.pm-header { background-color: #e6f2ff; }
-
-.desk-header, .desk-name {
-  font-weight: 600;
-  color: #000; /* black font */
+.am-header {
+  background-color: #fff9e6;
 }
 
-/* 🔹 Alternating background like AM/PM tabs */
+.pm-header {
+  background-color: #e6f2ff;
+}
+
+.desk-header,
+.desk-name {
+  font-weight: 600;
+  color: #000;
+}
+
+/* ✅ Only the first column has alternating background colors */
 .am-bg {
-  background-color: #fffdf2; /* soft yellowish tone */
+  background-color: #fff9e6;
 }
 
 .pm-bg {
-  background-color: #f5faff; /* soft bluish tone */
+  background-color: #e6f2ff;
 }
 
 .slot {
+  background-color: #fff; /* keep all time slots white */
   border-radius: 6px;
   padding: 6px;
   font-size: 0.9rem;
