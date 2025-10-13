@@ -3,8 +3,8 @@
     <h3>Weekly Desk Reservations</h3>
 
     <div class="date-picker">
-      <label>Select week (start date):</label>
-      <input type="date" v-model="weekStart" />
+      <label>Select week:</label>
+      <input type="date" v-model="selectedDate" />
     </div>
 
     <div class="table-wrapper">
@@ -12,7 +12,10 @@
         <thead>
           <tr>
             <th>Desk</th>
-            <th v-for="day in weekDays" :key="day">{{ day }}</th>
+            <th v-for="day in weekDays" :key="day">
+              {{ formatDay(day) }}
+              <div class="am-pm">AM / PM</div>
+            </th>
           </tr>
         </thead>
 
@@ -27,24 +30,17 @@
               <div class="period-container">
                 <div
                   class="slot"
-                  :class="{ reserved: isReserved(desk, day, 'before') }"
-                  @click="openConfirmPopover(desk, day, 'before')"
+                  :class="{ reserved: isReserved(desk, day, 'am') }"
+                  @click="openConfirmPopover(desk, day, 'am')"
                 >
-                  Before 1 PM
-                  <span class="reservation-name">
-                    {{ getReservationName(desk, day, 'before') }}
-                  </span>
+                  {{ getReservationName(desk, day, 'am') || 'AM' }}
                 </div>
-
                 <div
                   class="slot"
-                  :class="{ reserved: isReserved(desk, day, 'after') }"
-                  @click="openConfirmPopover(desk, day, 'after')"
+                  :class="{ reserved: isReserved(desk, day, 'pm') }"
+                  @click="openConfirmPopover(desk, day, 'pm')"
                 >
-                  After 1 PM
-                  <span class="reservation-name">
-                    {{ getReservationName(desk, day, 'after') }}
-                  </span>
+                  {{ getReservationName(desk, day, 'pm') || 'PM' }}
                 </div>
               </div>
             </td>
@@ -53,7 +49,6 @@
       </table>
     </div>
 
-    <!-- confirmation pop-up -->
     <div v-if="confirmPopover" class="confirm-popover">
       <p>
         Delete this reservation for
@@ -68,46 +63,60 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
-import { collection, query, onSnapshot, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, watch, onMounted } from "vue";
+import {
+  collection,
+  query,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 export default {
   setup() {
     const desks = Array.from({ length: 10 }, (_, i) => i + 1);
-    const weekStart = ref(new Date().toISOString().slice(0, 10));
+    const selectedDate = ref(new Date().toISOString().slice(0, 10));
     const reservations = ref([]);
     const confirmPopover = ref(null);
 
-    // Get all days in the selected week
-    const getWeekDays = (startDate) => {
-      const start = new Date(startDate);
+    const getMonday = (dateStr) => {
+      const date = new Date(dateStr);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
+      return new Date(date.setDate(diff));
+    };
+
+    const getWeekDays = (dateStr) => {
+      const monday = getMonday(dateStr);
       const days = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         days.push(d.toISOString().slice(0, 10));
       }
       return days;
     };
 
-    const weekDays = ref(getWeekDays(weekStart.value));
+    const weekDays = ref(getWeekDays(selectedDate.value));
 
     let unsubscribe = null;
-
-    // Real-time Firestore subscription
     const fetchReservationsRealtime = () => {
       if (unsubscribe) unsubscribe();
       const q = query(collection(db, "reservations"));
       unsubscribe = onSnapshot(q, (snapshot) => {
-        reservations.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        reservations.value = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
       });
     };
 
     onMounted(fetchReservationsRealtime);
-    watch(weekStart, (newDate) => {
+    watch(selectedDate, (newDate) => {
       weekDays.value = getWeekDays(newDate);
-      fetchReservationsRealtime();
     });
 
     const isReserved = (deskId, day, period) =>
@@ -122,12 +131,10 @@ export default {
       return res ? res.userName : "";
     };
 
-    // Open confirmation popup
     const openConfirmPopover = (deskId, day, period) => {
       const res = reservations.value.find(
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
-
       if (!res) return;
 
       const currentUser = localStorage.getItem("userName");
@@ -139,14 +146,10 @@ export default {
       confirmPopover.value = { deskId, day, period, reservation: res };
     };
 
-    // Delete + log
     const confirmDelete = async () => {
       if (!confirmPopover.value) return;
       const res = confirmPopover.value.reservation;
-
       await deleteDoc(doc(db, "reservations", res.id));
-
-      // ✅ Add log entry
       await addDoc(collection(db, "logs"), {
         action: "deleted",
         userName: res.userName,
@@ -155,13 +158,21 @@ export default {
         period: res.period,
         timestamp: serverTimestamp(),
       });
-
       confirmPopover.value = null;
+    };
+
+    const formatDay = (dateStr) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
     };
 
     return {
       desks,
-      weekStart,
+      selectedDate,
       weekDays,
       reservations,
       isReserved,
@@ -169,6 +180,7 @@ export default {
       openConfirmPopover,
       confirmPopover,
       confirmDelete,
+      formatDay,
     };
   },
 };
@@ -190,7 +202,7 @@ export default {
 h3 {
   text-align: center;
   font-size: 1.6rem;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .date-picker {
@@ -198,7 +210,7 @@ h3 {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .table-wrapper {
@@ -210,7 +222,6 @@ h3 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
   text-align: center;
 }
 
@@ -218,12 +229,17 @@ th,
 td {
   border: 1px solid #e5e5ea;
   padding: 8px;
-  vertical-align: middle;
 }
 
 th {
   background-color: #f2f2f7;
   font-weight: 600;
+}
+
+.am-pm {
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 2px;
 }
 
 .day-cell {
@@ -232,25 +248,22 @@ th {
 
 .period-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .slot {
-  flex: 1;
   text-align: center;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 5px 0;
+  padding: 5px;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: background-color 0.2s;
 }
 
 .slot:hover {
   background-color: #f0f8ff;
-  transform: scale(1.02);
 }
 
 .reserved {
@@ -285,7 +298,6 @@ th {
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
-  cursor: pointer;
 }
 
 .confirm-popover .cancel {
@@ -293,6 +305,5 @@ th {
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
-  cursor: pointer;
 }
 </style>
