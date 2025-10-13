@@ -12,37 +12,33 @@
         <thead>
           <tr>
             <th>Desk</th>
-            <th v-for="day in weekDays" :key="day">
-              {{ formatDay(day) }}
-              <div class="am-pm">AM / PM</div>
-            </th>
+            <th v-for="day in weekDays" :key="day + '-am'">{{ formatDay(day) }} AM</th>
+            <th v-for="day in weekDays" :key="day + '-pm'">{{ formatDay(day) }} PM</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr
-            v-for="(desk, index) in desks"
-            :key="desk"
-            :class="`desk-row desk-color-${index}`"
-          >
-            <td>Desk {{ desk }}</td>
-            <td v-for="day in weekDays" :key="day" class="day-cell">
-              <div class="period-container">
-                <div
-                  class="slot"
-                  :class="{ reserved: isReserved(desk, day, 'am') }"
-                  @click="openConfirmPopover(desk, day, 'am')"
-                >
-                  {{ getReservationName(desk, day, 'am') || 'AM' }}
-                </div>
-                <div
-                  class="slot"
-                  :class="{ reserved: isReserved(desk, day, 'pm') }"
-                  @click="openConfirmPopover(desk, day, 'pm')"
-                >
-                  {{ getReservationName(desk, day, 'pm') || 'PM' }}
-                </div>
-              </div>
+          <tr v-for="desk in desks" :key="desk">
+            <td class="desk-name">Desk {{ desk }}</td>
+
+            <!-- AM columns -->
+            <td
+              v-for="day in weekDays"
+              :key="`${desk}-${day}-am`"
+              :class="['slot', { reserved: isReserved(desk, day, 'am') }]"
+              @click="handleSlotClick(desk, day, 'am')"
+            >
+              {{ getReservationName(desk, day, 'am') || 'Free' }}
+            </td>
+
+            <!-- PM columns -->
+            <td
+              v-for="day in weekDays"
+              :key="`${desk}-${day}-pm`"
+              :class="['slot', { reserved: isReserved(desk, day, 'pm') }]"
+              @click="handleSlotClick(desk, day, 'pm')"
+            >
+              {{ getReservationName(desk, day, 'pm') || 'Free' }}
             </td>
           </tr>
         </tbody>
@@ -63,7 +59,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import {
   collection,
   query,
@@ -85,7 +81,7 @@ export default {
     const getMonday = (dateStr) => {
       const date = new Date(dateStr);
       const day = date.getDay();
-      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday
       return new Date(date.setDate(diff));
     };
 
@@ -131,11 +127,12 @@ export default {
       return res ? res.userName : "";
     };
 
-    const openConfirmPopover = (deskId, day, period) => {
+    const handleSlotClick = (deskId, day, period) => {
       const res = reservations.value.find(
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
-      if (!res) return;
+
+      if (!res) return; // nothing to delete
 
       const currentUser = localStorage.getItem("userName");
       if (res.userName !== currentUser) {
@@ -163,11 +160,7 @@ export default {
 
     const formatDay = (dateStr) => {
       const d = new Date(dateStr);
-      return d.toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
+      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
     };
 
     return {
@@ -177,7 +170,7 @@ export default {
       reservations,
       isReserved,
       getReservationName,
-      openConfirmPopover,
+      handleSlotClick,
       confirmPopover,
       confirmDelete,
       formatDay,
@@ -195,7 +188,7 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #333;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto 30px;
 }
 
@@ -229,6 +222,7 @@ th,
 td {
   border: 1px solid #e5e5ea;
   padding: 8px;
+  vertical-align: middle;
 }
 
 th {
@@ -236,28 +230,11 @@ th {
   font-weight: 600;
 }
 
-.am-pm {
-  font-size: 0.75rem;
-  color: #555;
-  margin-top: 2px;
-}
-
-.day-cell {
-  padding: 4px;
-}
-
-.period-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .slot {
   text-align: center;
-  border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 5px;
-  font-size: 0.8rem;
+  padding: 6px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 0.2s;
 }
