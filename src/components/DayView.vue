@@ -31,7 +31,7 @@
           <tr
             v-for="(desk, index) in desks"
             :key="desk"
-            :class="`desk-row desk-${index + 1}`"
+            :class="index % 2 === 0 ? 'desk-row am-bg' : 'desk-row pm-bg'"
           >
             <td class="desk-name">Desk {{ desk }}</td>
 
@@ -248,23 +248,19 @@ th, td {
 .am-header { background-color: #fff9e6; }
 .pm-header { background-color: #e6f2ff; }
 
-.desk-header,
-.desk-name {
+.desk-header, .desk-name {
   font-weight: 600;
-  text-align: center;
+  color: #000; /* black font */
 }
 
-/* 🎨 Distinct colors for each desk row */
-.desk-1 .desk-name { color: #007aff; }
-.desk-2 .desk-name { color: #ff9500; }
-.desk-3 .desk-name { color: #34c759; }
-.desk-4 .desk-name { color: #ff2d55; }
-.desk-5 .desk-name { color: #5856d6; }
-.desk-6 .desk-name { color: #ffcc00; }
-.desk-7 .desk-name { color: #5ac8fa; }
-.desk-8 .desk-name { color: #ff9f0a; }
-.desk-9 .desk-name { color: #30b0c7; }
-.desk-10 .desk-name { color: #af52de; }
+/* 🔹 Alternating background like AM/PM tabs */
+.am-bg {
+  background-color: #fffdf2; /* soft yellowish tone */
+}
+
+.pm-bg {
+  background-color: #f5faff; /* soft bluish tone */
+}
 
 .slot {
   border-radius: 6px;
