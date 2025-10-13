@@ -10,18 +10,19 @@
     <div class="table-wrapper">
       <table>
         <thead>
-          <!-- Row 1: Day names, each spans 2 columns -->
+          <!-- Header 1: Days (each spans 2 columns) -->
           <tr>
-            <th rowspan="2" class="desk-col">Desk</th>
-            <th v-for="day in weekDays" :key="day" colspan="2" class="day-group">
+            <th rowspan="2" class="desk-header">Desk</th>
+            <th v-for="day in weekDays" :key="day" colspan="2" class="day-header">
               {{ formatDay(day) }}
             </th>
           </tr>
-          <!-- Row 2: For each day, render AM then PM (alternating) -->
+
+          <!-- Header 2: AM / PM sub-columns -->
           <tr>
             <template v-for="day in weekDays" :key="day + '-sub'">
-              <th :key="day + '-am'" class="sub-col am">AM</th>
-              <th :key="day + '-pm'" class="sub-col pm">PM</th>
+              <th class="am-header">AM</th>
+              <th class="pm-header">PM</th>
             </template>
           </tr>
         </thead>
@@ -30,19 +31,18 @@
           <tr v-for="desk in desks" :key="desk">
             <td class="desk-name">Desk {{ desk }}</td>
 
-            <!-- For each day, render AM cell then PM cell (alternating) -->
-            <template v-for="day in weekDays" :key="`${desk}-${day}-cells`">
+            <!-- AM / PM cells under each day -->
+            <template v-for="day in weekDays" :key="`${desk}-${day}`">
               <td
-                :key="`${desk}-${day}-am`"
-                class="slot"
+                class="slot am"
                 :class="{ reserved: isReserved(desk, day, 'am') }"
                 @click="handleSlotClick(desk, day, 'am')"
               >
                 {{ getReservationName(desk, day, 'am') || 'Free' }}
               </td>
+
               <td
-                :key="`${desk}-${day}-pm`"
-                class="slot"
+                class="slot pm"
                 :class="{ reserved: isReserved(desk, day, 'pm') }"
                 @click="handleSlotClick(desk, day, 'pm')"
               >
@@ -88,15 +88,13 @@ export default {
     const reservations = ref([]);
     const confirmPopover = ref(null);
 
-    // Monday of the selected week
     const getMonday = (dateStr) => {
       const date = new Date(dateStr);
       const day = date.getDay();
-      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(date.setDate(diff));
     };
 
-    // Mon–Fri list
     const getWeekDays = (dateStr) => {
       const monday = getMonday(dateStr);
       const days = [];
@@ -110,13 +108,15 @@ export default {
 
     const weekDays = ref(getWeekDays(selectedDate.value));
 
-    // Realtime reservations
     let unsubscribe = null;
     const fetchReservationsRealtime = () => {
       if (unsubscribe) unsubscribe();
       const q = query(collection(db, "reservations"));
       unsubscribe = onSnapshot(q, (snapshot) => {
-        reservations.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        reservations.value = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
       });
     };
 
@@ -142,14 +142,12 @@ export default {
         (r) => r.deskId === deskId && r.date === day && r.period === period
       );
 
-      if (!res) return; // nothing to delete
-
+      if (!res) return;
       const currentUser = localStorage.getItem("userName");
       if (res.userName !== currentUser) {
         alert("You can only delete your own reservation.");
         return;
       }
-
       confirmPopover.value = { deskId, day, period, reservation: res };
     };
 
@@ -238,29 +236,35 @@ th, td {
   vertical-align: middle;
 }
 
-th.day-group {
-  background-color: #ededed;
+.day-header {
+  background-color: #f2f2f7;
+  font-weight: 600;
 }
 
-th.sub-col.am { background-color: #fff8e1; } /* light warm for AM */
-th.sub-col.pm { background-color: #e7f2ff; } /* light cool for PM */
+.am-header {
+  background-color: #fff9e6;
+}
 
-.desk-col { min-width: 100px; }
+.pm-header {
+  background-color: #e6f2ff;
+}
 
-.desk-name {
-  font-weight: 600;
+.desk-header, .desk-name {
   background-color: #f9fafc;
+  font-weight: 600;
 }
 
 .slot {
   border-radius: 6px;
   padding: 6px;
   font-size: 0.9rem;
-  cursor: pointer;
   transition: background-color 0.2s;
+  cursor: pointer;
 }
 
-.slot:hover { background-color: #f0f8ff; }
+.slot:hover {
+  background-color: #f0f8ff;
+}
 
 .reserved {
   background-color: #007aff;
@@ -279,27 +283,5 @@ th.sub-col.pm { background-color: #e7f2ff; } /* light cool for PM */
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   text-align: center;
   z-index: 1000;
-}
-
-.confirm-popover .buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.confirm-popover .delete {
-  background: #ff3b30;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-}
-
-.confirm-popover .cancel {
-  background: #ccc;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
 }
 </style>
